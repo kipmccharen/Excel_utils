@@ -1,0 +1,509 @@
+Public Function ConCatt(rRange As Range, Optional sConnector As String) As String
+'***************************************************************************
+'Purpose: concatenate a range of text into one string using an optional connector
+'        Equivalent to '__'.join(range) in Python.
+'Inputs: rRange - range of cells with text to concatenate.
+'        sConnector - optional string to put between all cells.
+'Outputs:Long string of joined values.
+'***************************************************************************
+
+Dim sC As String
+Dim rCell As Range
+
+	ConCatt = ""
+
+	If sConnector = "" Then
+		sC = ","
+	ElseIf sConnector = "1" Then
+		sC = "','"
+	ElseIf LCase(sConnector) = "cross" Then
+		sC = ""
+	Else
+		sC = sConnector
+	End If
+
+	For Each rCell In rRange
+		If rCell.Value <> "" And IsNull(rCell) = False Then
+			If ConCatt = "" Then
+				ConCatt = rCell.Value
+			Else
+				ConCatt = ConCatt & sC & rCell.Value
+				If LCase(sConnector) = "cross" Then
+					ConCatt = Replace(ConCatt, " ", "")
+					If Left(ConCatt, 1) = "," Then
+						ConCatt = Right(ConCatt, Len(ConCatt) - 1)
+					End If
+				End If
+			End If
+		End If
+	Next rCell
+
+	If sConnector = "1" Then
+		ConCatt = "('" & ConCatt & "')"
+	End If
+
+End Function
+
+'''''''''''''''''''
+
+Function SumCellsByColor(rData As Range, cellRefColor As Range)
+'***************************************************************************
+'Purpose: SUMIF but instead of a reference value, you must provide a
+'        reference cell with the background color to match
+'Inputs: rData - range of datapoints to potentially sum together
+'        cellRefColor - one cell with the background color to match
+'Outputs:Numeric sum of appropriate values in rData
+'***************************************************************************
+Dim indRefColor As Long
+Dim cellCurrent As Range
+Dim sumRes
+
+    Application.Volatile
+    sumRes = 0
+    indRefColor = cellRefColor.Cells(1, 1).Interior.Color
+    For Each cellCurrent In rData
+        If indRefColor = cellCurrent.Interior.Color Then
+            sumRes = WorksheetFunction.Sum(cellCurrent, sumRes)
+        End If
+    Next cellCurrent
+ 
+    SumCellsByColor = sumRes
+	
+End Function
+
+'''''''''''''''''''
+
+Public Function IsInR(rCheckRange As Range, rLookups As Range) As Boolean
+'***************************************************************************
+'Purpose: boolean, is there any overlap of the same value between two ranges?
+'       If even one value matches between the two ranges, returns True.
+'Inputs: rCheckRange - first range to check
+'        rLookups - second range to check
+'Outputs:True or False
+'***************************************************************************
+
+Dim rCell As Range
+Dim rCell2 As Range
+
+	For Each rCell In rCheckRange
+		For Each rCell2 In rLookups
+			If rCell2 = rCell.Value Then
+				IsInR = True
+				Exit Function
+			End If
+		Next rCell2
+	Next rCell
+
+	IsInR = False
+
+End Function
+
+'''''''''''''''''''
+
+Public Function AllInR(rCheckRange As Range, rLookups As Range) As Boolean
+'***************************************************************************
+'Purpose: boolean, False if there any value from the first range which does not
+'        appear in the second range.
+'Inputs: rCheckRange - first range to check
+'        rLookups - second range to check
+'Outputs:True or False
+'***************************************************************************
+
+Dim rCell As Range
+Dim rCell2 As Range
+Dim bCheck As Boolean
+
+	bCheck = False
+
+	'check each cell in the range
+	For Each rCell In rCheckRange
+		'is this cell in the range?
+		For Each rCell2 In rLookups
+			If rCell2 = rCell.Value Then
+				bCheck = True
+			End If
+		Next rCell2
+		If bCheck = False Then
+			AllInR = False
+			Exit Function
+		End If
+		
+		bCheck = False
+	Next rCell
+
+	AllInR = True
+
+End Function
+
+'''''''''''''''''''
+
+Public Function ConCatIf(rRangeToConcat As Range, rRangeForIf As Range, sComparison As String, Optional sConnector As String) As String
+'***************************************************************************
+'Purpose: concatenate a range of strings, if a condition is met
+'Inputs: rRangeToConcat - range of cells with text to concatenate.
+'        rRangeForIf - range of categories to potentially match
+'        sComparison - string value to match categories from rRangeForIF
+'        sConnector - optional string to put between all cells.
+'Outputs:Long string of joined values.
+'***************************************************************************
+
+Dim rCell As Range
+Dim sFinal As String
+Dim sNow As String
+Dim IfItem As Variant
+Dim i As Integer
+Dim ConcatItem As Variant
+
+	If IsMissing(sConnector) Then
+		sConnector = ""
+	End If
+	i = 0
+	For Each rCell In rRangeToConcat
+		i = i + 1
+		If IsError(rRangeToConcat(i)) Or rRangeToConcat(i) = "" Then
+		
+		Else
+			sNow = Trim(rRangeToConcat(i))
+			If rRangeForIf(i) = sComparison Then
+				If sFinal = "" Then
+					sFinal = sNow '& "a1"
+				Else
+					sFinal = sFinal & sConnector & sNow
+				End If
+			End If
+		End If
+	Next rCell
+
+	ConCatIf = sFinal
+
+End Function
+
+'''''''''''''''''''
+
+Public Function PyTextNumOnly(sVal As String, Optional sReplaceWith As String) As String
+'***************************************************************************
+'Purpose: Remove any non-alphanumeric characters (keeps _ and .)
+'        Useful to transform raw text to column names.
+'Inputs: sVal - string of characters, from which to remove non-alphanumeric chars
+'        sReplaceWith - optional string to substitute for removed characters
+'Outputs: String only including text and numbers (and _ and .)
+'***************************************************************************
+
+Dim intPos As Integer
+Dim sNumber As String
+
+	For intPos = 1 To Len(sVal)
+	''95 _  and 46 . are ok
+		If Asc(Mid(sVal, intPos, 1)) = 95 Or Asc(Mid(sVal, intPos, 1)) = 46 Or _
+		   (Asc(Mid(sVal, intPos, 1)) >= 48 And Asc(Mid(sVal, intPos, 1)) <= 57) Or _
+		   (Asc(Mid(sVal, intPos, 1)) >= 65 And Asc(Mid(sVal, intPos, 1)) <= 90) Or _
+		   (Asc(Mid(sVal, intPos, 1)) >= 97 And Asc(Mid(sVal, intPos, 1)) <= 122) Or _
+		   (Asc(Mid(sVal, intPos, 1)) >= 192 And Asc(Mid(sVal, intPos, 1)) <= 255) Then
+			sNumber = sNumber & Mid(sVal, intPos, 1)
+		Elif Not IsMissing(sReplaceWith)
+			sNumber = sNumber & sReplaceWith
+		End If
+	Next intPos
+	PyTextNumOnly = sNumber
+	
+End Function
+
+'''''''''''''''''''
+
+Function dNumFromTxt(sVal As String) As Double
+'***************************************************************************
+'Purpose: Remove any non-numbers, but keep periods (.) as decimal points
+'        Useful to clean up raw data with errant characters besides numbers
+'Inputs: sVal - string of characters, from which to remove non-numbers
+'Outputs: String only including numbers (and .)
+'***************************************************************************
+
+Dim lCount As Long
+Dim sEnd As String
+Dim schar As String
+
+	For lCount = 1 To Len(sVal)
+		schar = Mid(sVal, lCount, 1)
+		If IsNumeric(schar) Or schar = "." Then
+			sEnd = sEnd & schar
+		End If
+	Next lCount
+	If sEnd <> "" Then
+		dNumFromTxt = CDbl(sEnd)
+	End If
+	
+End Function
+
+'''''''''''''''''''
+
+Public Function raw_to_final_str(sRaw As String, i0Num1Txt2Dt3SemiColFlag As Integer, _
+        Optional bStripSpecial As Integer = False)
+'***************************************************************************
+'Purpose: Transform raw string to appropriate code. e.g. FinalVersion3 -> 'FinalVersion3'
+'Inputs: sRaw - string of characters, from which to remove non-alphanumeric chars
+'        i0Num1Txt2Dt3SemiColFlag - integer indicator defining how to process the value
+'               0 == number, do not modify, but remove any non-number characters
+'               1 == text, add quotes on either side to be inserted as is
+'               2 == date, transform excel date value to "YYYY-MM-DD HH:MM:SS"
+'               3 == semicolon-delimited list, transform val1;val2 to ['val1', 'val2']
+'        bStripSpecial - optional flag to remove special characters, default False
+'Outputs: String, modified as specified, to be inserted in code
+'***************************************************************************
+
+    Dim vDel As Variant, iDel As Integer, sInMediaRes As String
+    sInMediaRes = ""
+    sRaw = Trim(sRaw)
+    '' excel-ify new lines if not number or date
+    If i0Num1Txt2Dt3SemiColFlag <> 0 And i0Num1Txt2Dt3SemiColFlag <> 2 Then
+        sRaw = Replace(sRaw, Chr(10), "'+char(10)+'")
+    End If
+    If i0Num1Txt2Dt3SemiColFlag = 0 Then
+        sInMediaRes = dNumFromTxt(sRaw)
+    ElseIf i0Num1Txt2Dt3SemiColFlag = 2 Then
+        sInMediaRes = "'" & Format(sRaw, "YYYY-MM-DD HH:MM:SS") & "'"
+    ElseIf i0Num1Txt2Dt3SemiColFlag = 3 Then
+        'if delimited, chop up values (remove bad separators) to iterate over them
+        If Len(sRaw) - Len(Replace(sRaw, ";", "")) = 0 Then
+            sInMediaRes = sRaw
+        Else
+            ReDim vDel(Len(sRaw) - Len(Replace(sRaw, ";", "")) + 1)
+            vDel = Split(sRaw, ";")
+            For iDel = LBound(vDel) To UBound(vDel)
+                sInMediaRes = sInMediaRes & ", '" & Replace(Trim(vDel(iDel)), Chr(160), "'")
+            Next iDel
+            sInMediaRes = "[" & sInMediaRes & "]"
+        End If
+    Else
+        sInMediaRes = "'" & sRaw & "'"
+    End If
+    '' if opted to strip special characters, do it
+    If bStripSpecial Then
+        sInMediaRes = PyTextNumOnly(sInMediaRes)
+    End If
+    '' if there's no value, give default if available or empty string
+    If sInMediaRes = "" Or sInMediaRes = "''" Then
+        If IsMissing(sDefault) = False Then
+            raw_to_final_str = sDefault
+        Else
+            raw_to_final_str = ""
+        End If
+    Else
+    '' otherwise give processed string
+        raw_to_final_str = sInMediaRes
+    End If
+End Function
+
+'''''''''''''''''''
+
+Public Function ConCatPythonDict(rColumnNames As Range, r0Num1Txt2Dt3SemiColFlag As Range, _
+    rPrimaryKeyFlag As Range, rValues As Range, Optional i0Num1Txt2Dt3SemiCol_subKeys As Integer = 1) As String
+'***************************************************************************
+'Purpose: Convert a table of excel values to a dense Python dict,
+'         using one column as "primary key" row IDs, which become keys in output dict.
+'         Within each output dict is a dictionary with column names == keys, only include values if not empty
+'         e.g. column names in row 3 cols A:G, values in rows 4-10, type flags in row 2, primary key in column A
+'             flag to indicate which is the primary key in row 1
+'               ConCatPythonDict(A3:G3, A2:G2, A1:G1, A4:G10, 1)
+'         Helpful for sparse data with lots of empty cells.
+'Inputs: rColumnNames - column names, to become keys within each row dict
+'        i0Num1Txt2Dt3SemiColFlag - integer indicator defining how to process the values
+'               0 == number, do not modify, but remove any non-number characters
+'               1 == text, add quotes on either side to be inserted as is
+'               2 == date, transform excel date value to "YYYY-MM-DD HH:MM:SS"
+'               3 == semicolon-delimited list, transform val1;val2 to ['val1', 'val2']
+'        rPrimaryKeyFlag - range for each column with 1 to indicate primary key for output dictionary key
+'        rValues - full range of data values, empty cells will not be included
+'        i0Num1Txt2Dt3SemiCol_subKeys - integer, default=1. Same as above, but for the primary key values
+'Outputs: String, which can be copied and pasted as python dictionary code
+'***************************************************************************
+'converts value range into dense dictionary, not saving values where missing
+Dim iCol As Integer, iRow As Integer, vKeys As Variant, sRow As String
+Dim sAll As String, sCol As String, vDel As Variant, iDel As Integer
+Dim cccheck As String, i As Integer, dictitems As Variant
+Dim iKeyCol As Integer, vColKeys As Variant
+
+	'Make sure ranges match sizes
+	If rColumnNames.Count <> rValues.Columns.Count Or rColumnNames.Count <> r0Num1Txt2Dt3SemiColFlag.Count Or _
+	r0Num1Txt2Dt3SemiColFlag.Count <> rValues.Columns.Count Then
+		ConCatPythonDict = "Array sizes must match."
+		Exit Function
+	End If
+	'identify which column is the primary key
+	For iCol = 1 To rPrimaryKeyFlag.Count
+		If rPrimaryKeyFlag(, iCol).Value = 1 Then
+			iKeyCol = iCol
+		End If
+	Next iCol
+	'' add column names to serve as sub-dict key names
+	For iCol = LBound(vColKeys) To UBound(vColKeys)
+		vColKeys(iCol) = raw_to_final_str(rColumnNames(iCol), i0Num1Txt2Dt3SemiCol_subKeys)
+	Next iCol
+	'only allow one row each for columns and flags
+	If rColumnNames.rows.Count > 1 Or r0Num1Txt2Dt3SemiColFlag.rows.Count > 1 Then
+		ConCatPythonDict = "Columns Names and Text Flags must be one row"
+		Exit Function
+	End If
+	sAll = "{"
+	'create an empty array for each dict key/value
+	ReDim vKeys(rValues.rows.Count)
+	ReDim dictitems(rValues.rows.Count)
+	'' for each row, create a key
+	For iRow = 1 To UBound(vKeys)
+		sAll = sAll & raw_to_final_str(rValues(iRow, iKeyCol), r0Num1Txt2Dt3SemiColFlag(, iKeyCol), True) & ": {"
+		'' for each col, generate values as available
+		For iCol = 1 To rValues.Columns.Count
+			'' don't use empty cells OR the key column
+			If rValues(iRow, iCol).Value <> "" And iCol <> iKeyCol Then
+				 sAll = sAll & "," & vColKeys(iCol) & ":" & _
+					raw_to_final_str(rValues(iRow, iCol), r0Num1Txt2Dt3SemiColFlag(, iCol), True)
+			End If
+		Next iCol
+		sAll = sAll & "},  "
+	Next iRow
+	ConCatPythonDict = Replace(Replace(sAll, ", {", "{"), "{,", "{") & "}"
+
+End Function
+
+'''''''''''''''''''
+
+Public Function ConCatValueTable(rColumnNames As Range, r0Num1Txt2Dt3SemiColFlag As Range, _
+    rValues As Range, Optional rDefaults As Range) As String
+'***************************************************************************
+'Purpose: concatenate a table of values into a SQL value table to join e.g.
+'        (VALUE ('foo', 1), ('bar', 2)) as v (colFoo, colBar)
+'        Requires colnames to use, an integer to 'type' each col,
+'        values to fill out the table, and optional defaults when empty
+'Inputs: rColumnNames - column names, to become keys within each row dict
+'        i0Num1Txt2Dt3SemiColFlag - integer indicator defining how to process the values
+'               0 == number, do not modify, but remove any non-number characters
+'               1 == text, add quotes on either side to be inserted as is
+'               2 == date, transform excel date value to "YYYY-MM-DD HH:MM:SS"
+'               3 == semicolon-delimited list, transform val1;val2 to ['val1', 'val2']
+'        rValues - full range of data values, empty cells will not be included
+'Outputs:Long string which can be pasted into SQL to join as an ad-hoc table
+'***************************************************************************
+
+Dim iCol As Integer, iRow As Integer, vDef As Variant, sRow As String
+Dim sAll As String, sCol As String, vDel As Variant, iDel As Integer
+Dim cccheck As String, i As Integer
+
+	'Make sure ranges match sizes
+	If rColumnNames.Count <> rValues.Columns.Count Or rColumnNames.Count <> r0Num1Txt2Dt3SemiColFlag.Count Or _
+	r0Num1Txt2Dt3SemiColFlag.Count <> rValues.Columns.Count Then
+		ConCatValueTable = "Array sizes must match."
+		Exit Function
+	End If
+
+	'identify columns to use
+	If IsMissing(rDefaults) Then
+		If rDefaults.Count <> rColumnNames.Count Then
+			ConCatValueTable = "Array sizes must match."
+			Exit Function
+		Else
+			vDef = rDefaults.Value
+		End If
+	Else
+		ReDim vDef(rColumnNames.Count)
+		For iCol = LBound(vDef) To UBound(vDef)
+			vDef(iCol) = "NULL"
+		Next iCol
+	End If
+
+	'only allow one row each for columns and flags
+	If rColumnNames.rows.Count > 1 Or r0Num1Txt2Dt3SemiColFlag.rows.Count > 1 Then
+		ConCatValueTable = "Columns Names and Text Flags must be one row"
+		Exit Function
+	End If
+
+	'Create list of column names, add brackets
+	For iCol = 1 To rColumnNames.Count
+		If r0Num1Txt2Dt3SemiColFlag(, iCol).Value <> "" And rColumnNames(, iCol).Value <> "" Then 'column limiting statement
+			sCol = sCol & ",[" & TextNumOnly(Replace(rColumnNames(, iCol), " ", "")) & "]"
+		End If
+	Next iCol
+
+	For iRow = 1 To rValues.rows.Count
+		cccheck = ""
+		For i = 1 To rColumnNames.Count
+			cccheck = CStr(cccheck) & CStr(rValues(iRow, i))
+		Next i
+		If Len(cccheck) <> 0 Then
+			For iCol = 1 To rColumnNames.Count
+				If r0Num1Txt2Dt3SemiColFlag(, iCol) <> "" And rColumnNames(, iCol).Value <> "" Then 'column limiting statement
+					'add comma separator
+					sRow = sRow & "," & raw_to_final_str(rValues(iRow, iCol), r0Num1Txt2Dt3SemiColFlag(, iCol), True)
+				End If
+			Next iCol
+			If Len(sRow) > Len(Replace(sRow, "|||||||", "")) Then
+				For iDel = LBound(vDel) To UBound(vDel)
+					sAll = sAll & ",(" & Replace(Replace(sRow, "|||||||", Trim(vDel(iDel))), Chr(160), "") & ")"
+				Next iDel
+				sRow = ""
+			Else
+				sAll = sAll & ",(" & sRow & ")"
+				sRow = ""
+			End If
+		End If
+	Next iRow
+
+	sAll = "( VALUES " & Right(sAll, Len(sAll) - 1) & ") v (" & sCol & ")"
+	sAll = Replace(Replace(sAll, "(,", "("), "'NULL'", "NULL")
+
+	ConCatValueTable = sAll
+End Function
+
+'''''''''''''''''''
+
+Public Function Ifequals(val, ifThis, thenThis)
+'if a value equals something then return another value, otherwise keep original value
+
+	If val = ifThis Then
+		Ifequals = thenThis
+	Else
+		Ifequals = val
+	End If
+
+End Function
+
+'''''''''''''''''''
+
+Public Function Nz(val) As Double
+'if a value is null, return a zero
+On Error Resume Next
+
+	If IsNumeric(val) = True And val <> "" Then
+		Nz = CDbl(val)
+	Else
+		Nz = 0
+	End If
+
+End Function
+
+'''''''''''''''''''
+
+Public Function IfNull(val, val2) As Variant
+'if a value is null, return something else instead
+On Error Resume Next
+
+	If val Is Null Or val = "" Then
+		IfNull = val2
+	Else
+		IfNull = val
+	End If
+
+End Function
+
+'''''''''''''''''''
+
+Public Function IsBetween(dVal As Double, dUB As Double, dLB As Double) As Boolean
+'yes/no is the value between specified values
+
+	If (dVal > dUB) Or (dVal < dLB) Then
+		IsBetween = False
+	Else
+		IsBetween = True
+	End If
+
+End Function
+
+'''''''''''''''''''
